@@ -1,0 +1,1032 @@
+//apex product page
+
+<script>
+
+  //get discount information and show it on ui
+  async function calculateDiscount(type = 'single') {
+    try {
+      await getGlobalDiscount();
+      //calculate discount and insert values into respective elements for product pages
+      $(".discount-code").text(DISCOUNT_TITLE);
+      $(".config-discount-code").text(DISCOUNT_TITLE)
+      let originalPrice = type=="single"?'{{product.selected_or_first_available_variant.price|money }}':$(".active-variant-cta-price").text();
+      originalPrice = originalPrice.replace('$', '').replace(',', '').replace(/ /g, '').replace(/\n/g, '-');
+      const total_discount = (originalPrice * DISCOUNT_VALUE) / 100;
+      const discounted_price = Number(originalPrice - total_discount).toFixed(2);
+      $(".discounted-price").text(`$${discounted_price}`);
+     
+
+      //calculate discount for configurator
+      let originalConfiguratorPrice = $(".config-actual-price");
+      originalConfiguratorPrice = originalConfiguratorPrice.text().replace('$', '').replace(',', '').replace(/ /g, '').replace(/\n/g, '');
+      const totalConfiguratorDiscount = (originalConfiguratorPrice * DISCOUNT_VALUE) / 100;
+      const discountedConfiguratorPrice = Number(originalConfiguratorPrice - totalConfiguratorDiscount).toFixed(2);
+      $(".config-discounted-price").text(`$${discountedConfiguratorPrice}`);
+
+
+      if(DISCOUNT_VALUE==null){
+        $(".actual-price").css("display", "none");
+        $(".text:contains('/code')").css("display", "none");
+        $(".discount-code").css("display", "none");
+        $(".config-actual-price").css("display", "none");
+        $(".w-code").css("display", "none");
+        $(".config-discount-code").css("display", "none");
+      }
+      
+    } catch (e) {
+      console.log('==>> error ingetGLobalDiscount', e.message);
+    }
+  }
+
+  //get fps data
+  async function getFPS(id = '') {
+    const variantId = id || '{{product.selected_or_first_available_variant.id }}';
+    const data = await fetch(`${BASE_URL}/sf/varTempData?variantId=${variantId}`);
+    const jsonRes = await data.json();
+    const gpuTag = jsonRes.gpuTags._id;
+    const fpsData = jsonRes.data.prodOption.find((po) => po.tag == gpuTag && po.isDefault == true)?.fpsData || [];
+    if (!fpsData.length) {
+      return;
+    }
+    
+    if ($('#product-fps-images').flickity) {
+      $('#product-fps-images').flickity('destroy');
+    }
+    $('#product-fps-images').empty();
+
+    fpsData.forEach((fps) => {
+      $('#product-fps-images').append(`
+    <div class="game-image">
+      <img class="image" src="${updateImageUrl(fps.value)}"/>
+      <p class="fps-name">${fps.name||""}</p>
+      <div class="desc-fps-img-progress-main">
+        
+        <progress value="${fps.key}" max="300"></progress>
+        <span class="fps-modal-img-progress-text">${fps.key > 300 ? '300+' : fps.key}</span>
+      </div>
+    </div>
+    `);
+    });
+    $('#product-fps-images').flickity({
+      autoPlay: true,
+      pageDots: false,
+      cellAlign: 'center',
+      contain: true,
+      wrapAround: true,
+      prevNextButtons: false,
+    });
+  }
+
+  //tech summary single
+  async function techSpecSummarySingle() {
+    try {
+      const variantId = $('.tech-specs').attr('data-variant');
+      // const variantId = 42415980609790;
+      const data = await fetch(`${BASE_URL}/sf/groupSummary?varientIds=${variantId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const jsonData = await data.json();
+
+      SpecsData = jsonData.data;
+      SpecsName = jsonData.summaryGroups;
+
+      SpecsName.forEach((spec) => {
+        if (String(spec.title).toLowerCase() == 'features') {
+          $('.tech-specs').append(
+            `<div class="specs-details">
+        <p class="title">${spec.title}</p>
+        <div class="description cus-description-features">
+        ${Object.entries(SpecsData[0].data[String(spec.title).toLowerCase()])
+          .map(
+            ([title, image]) =>
+              `<div class="icon-items">
+            <div class="inner">
+              <img class="image" src="${updateImageUrl(image)}"/>
+              <p class="image-text">${title}</p>
+            </div>
+          </div>`
+          )
+          .join('')}
+        </div>
+      </div>`
+          );
+        } else {
+          $('.tech-specs').append(`<div class="specs-details">
+        <p class="title">${spec.title}</p>
+        <p class="description">${SpecsData[0].data[spec.id].name}</p>
+      </div>`);
+        }
+      });
+    } catch (error) {
+      console.log('error in techSpecSummary', error);
+    }
+  }
+
+  //tech summary multiple
+  async function techSpecSummaryMultiple() {
+    try {
+      const variants = {{product.variants | json}};
+      const variantIds = variants.map(v => v.id).join(",")
+      const data = await fetch(
+        `${BASE_URL}/sf/groupSummary?varientIds=${variantIds}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json"
+          },
+        }
+      );
+      const jsonData = await data.json();
+      SpecsData = jsonData.data;
+      SpecsName = jsonData.summaryGroups;
+
+      //insert parts details in variant select modal that opens on customize pc click
+      SpecsData.forEach((variant) => {
+        $(`#variant-modal-${variant.variantId}`).append(`<div class="choose-a-pc-panel" style="display: none;">
+          <p class="variant-detail-paragraph">
+            The first tier in the Gregor signature series, the Platinum Rig comes standard with an AMD Ryzen 5
+            5500 processor, 16GB of RAM, and an Intel Arc A750 to enhance your Rainbow Six gaming experience.
+          </p>
+          <div class="variant-key-specs">
+            <p class="small-title">Key specs:</p>
+            <div class="var-list-of-specs">
+              <ul class="ul">
+                ${SpecsName.slice(0,6).map(spec=>`<li class="li">${spec.title}: ${variant.data[spec.id]?.name}</li>`).join('')}
+              </ul>
+              <div
+                class="cus-select-pc-link"
+                id="openConfigModal"
+                onclick="configuratorModal(${variant.variantId}),openCustomizeModal(${variant.variantId})"
+              >
+                Select this pc
+              </div>
+            </div>
+          </div>
+        </div>`)
+      });
+      
+      /*I used the "last" keyword at the end of each class because, 
+      with jQuery's append method, adding elements to a div with a specific class would normally append the element
+      to every div with that class. However, by using "last," it ensures that the element is appended only 
+      to the last occurrence of a div with that class, avoiding duplication in other divs with the same class.*/
+  
+    
+
+      SpecsData.forEach((variant,index) => {
+        const currentVariant = variants.find(v => v.id == variant.variantId);
+        $(".variants-specs-main:last").append(`
+              <div class="variant-components ${index==0?"active-variant-components":""}" id="variant-components-${variant.variantId}">
+            </div>`);
+        $(".variant-components:last").append(` <div class="var-compo-header">
+              <p class="title">${currentVariant.title}</p>
+              <p class="price">$${currentVariant.price/100}</p>
+              ${index!=SpecsData.length-1 ?`
+              <svg class="card-arrow-mobile" onclick="scrollRight()" xmlns="http://www.w3.org/2000/svg" width="24.685" height="8.568" viewBox="0 0 24.685 8.568">
+                  <path id="Path_8" data-name="Path 8" d="M48.385,0V3.284H30v2H48.385V8.568l6.3-4.284Z" transform="translate(-30)" fill="#fff" style="
+                  fill: #000;
+              "></path>
+              </svg>`:""}
+              
+            </div>`);
+        $(".variant-components:last").append(`<div class="pc-components-details"></div>`);
+        SpecsName.forEach(name => {
+          if (String(name.title).toLowerCase() == "features") {
+            $(".pc-components-details:last").append(`
+              <div class="components-features">
+              ${Object.entries(variant.data[String(name.title).toLowerCase()])
+              .map(
+                ([title, image]) =>
+                  `<div class="icon-items">
+                <div class="inner">
+                  <img class="image" src="${updateImageUrl(image)}"/>
+                  <p class="image-text">${title}</p>
+                </div>
+              </div>
+             `
+              )
+              .join("")} 
+               </div>`)
+          } else {
+            $(".pc-components-details:last").append(` <p class="details">${variant.data[name.id]?.name}</p>`);
+          }
+        });
+        if(index==0){
+        $(".active-variant-components").append(` <div class="specs-cta">
+        <a class="main-product-cta-customizer" href="#" onclick="openPartnersModal()">Customize this pc</a>
+        <div class="recommended-add-to-cart-cta">
+          <button type="submit" name="add" data-add-to-cart="" class="cus-atc-btn btn btn--full add-to-cart" onclick="addToCartBasic('')">
+            <svg class="act-svg" xmlns="http://www.w3.org/2000/svg" width="14.186" height="13.085" viewBox="0 0 14.186 13.085">
+              <g id="Group_551" data-name="Group 551" transform="translate(-5672.767 109.57)">
+                <circle id="Ellipse_20" data-name="Ellipse 20" cx="1.167" cy="1.167" r="1.167" transform="translate(5675.513 -98.819)" fill="#fff"></circle>
+                <circle id="Ellipse_21" data-name="Ellipse 21" cx="1.167" cy="1.167" r="1.167" transform="translate(5684.619 -98.819)" fill="#fff"></circle>
+                <path id="Path_346" data-name="Path 346" d="M5673.965-108.26h2.219l1.075,4.912h9.736v-5.743" transform="translate(-1.198 -0.479)" fill="none" stroke="#fff" stroke-width="1.5"></path>
+                <path id="Path_347" data-name="Path 347" d="M5674.618-107.929l1.814,8.246h9.856" transform="translate(0.31 -0.893)" fill="none" stroke="#fff" stroke-width="1.5"></path>
+              </g>
+            </svg>
+            <span data-add-to-cart-text="" data-default-text="Add to cart"> Add to cart </span>
+          </button>
+        </div>
+      </div>
+    </div>`);
+        
+        }
+      });
+      SpecsName.forEach((spec) => {
+        $(".pc-components-name").append(
+          `<p class="title">${spec.title}</p>`);
+      });
+    } catch (error) {
+      console.log("error in techSpecSummary", error);
+    }
+  }
+
+
+  //tech Summary function
+  function techSummary (type="single") {
+    if (type == "single") {
+        techSpecSummarySingle();
+    } else {
+        techSpecSummaryMultiple();
+    }
+  }
+
+  //run each time customize pc is clicked
+  async function configuratorModal(id) {
+    $('.customize-pc-side').children('.tab-header').empty();
+    $('.customize-pc-side').children('.pc-parts-accordions').remove();
+    
+    const variantId = id||'{{product.selected_or_first_available_variant.id }}';    
+    const jsonData = GLOBAL_VARIANT_CONFIGURATOR_DATA.data.find(variantData=>variantData.variantId == variantId);
+    const treeJson = jsonData.treeData;
+    console.log('treeJson', treeJson);
+    treeJson.sort((a, b) => a.priority - b.priority);
+
+    //create fps div 
+    //looping zero becasue we have components always on 1st index
+    const selectedFPS=treeJson[0].Groups.find(group=>group.name=="GPU").product.find(p=>p.isDefault==true).fpsData;
+    console.log("selectedFPS",selectedFPS)
+    //create select fps div for default gpu
+    createFPSSelectDiv(selectedFPS);
+    //creating header for customizer
+    treeJson.forEach((tree, index) => {
+      if (tree.Groups.length > 0) {
+        $('.customize-pc-side').children('.tab-header').append(`
+      <div class="pc-parts-tab ${index == 0 ? 'active-config-tab' : ''}" onclick="toggleTab(this,'${tree.id}')">${
+          tree.name
+        }</div>`);
+      }
+    });
+
+    //creating components for each heading
+    treeJson.forEach((tree, index) => {
+      $('.customize-pc-side').append(`
+      <div class="pc-parts-accordions" id="accordian-${tree.id}">
+        <div class="inner">
+          ${tree.Groups.map(
+            (group) => `
+            <div class="block">
+            <button class="accordion" id="button-${group.id}" onclick="togglePanel(this)">
+              <div class="inner">
+                <div class="pc-part-name">
+                  <p class="title">${group.name}</p>
+                  <p class="detail" id="selected-part-name-${group.id}">${
+              group.product.find((p) => p.isDefault == true).name
+            }</p>
+                </div>
+                <div class="accordion-image">
+                <img class="img" id="selected-part-image-${group.id}" height="80px" width="100px" src="${updateImageUrl(
+              group.product.find((p) => p.isDefault == true).imgSrc
+            )}">
+                </div>
+              </div>
+            </button>
+            <div class="panel" id="panel-${group.id}">
+              <div class="pc-parts-details">
+                ${group.product
+                  .map(
+                    (product) => `
+                  <div class="inner ${product.isDefault ? 'selected' : ''}"
+                    variant-id="${variantId}"
+                    group-id="${group.id}"
+                    group-name="${group.name}"
+                    ${group.name=="GPU"?`groupFPS='${JSON.stringify(product.fpsData)}''`:""}
+                    part-id="${product._id}"
+                    part-name="${product.name}"
+                    part-image="${updateImageUrl(product.imgSrc)}"
+                    part-price="${product.price}" 
+                    part-parent="${product.parentProdOpt.map((parent) => parent.value)}"
+                    part-childs="${product.childProdOpts.map((child) => child._id)}"
+                    part-parent-group="${product?.parentGroup?.value || ''}"
+                    onclick="selectPart(this,'${id?'multi':'single'}')"
+                    >
+                    <div class="cus-parts-image">
+                      <img
+                        class="img"
+                        src="${updateImageUrl(product.imgSrc)}"
+                      >
+                    </div>
+                    <p class="title">${product.name}</p>
+                    <div class="cta-and-price">
+                      <p class="cus-parts-link seeMoreBtn" onclick="openSeeMoreModal('${product._id}')">More info</p>
+                      <p class="parts-price">+$${product.price}</p>
+                    </div>
+                  </div>
+                `
+                  )
+                  .join('')}
+              </div>
+            </div>
+          </div>`
+          ).join('')}
+        </div>
+       </div>`);
+    });
+
+    //create see More modal for each part;
+    
+    treeJson.forEach((tree, index) => {
+      tree.Groups.forEach((group) => {
+        group.product.forEach((product) => {
+          $("#allSeeMoreModal").append(`<div id="seeMoreModal-${product._id}" class="see-more-modal" onclick="closeSeeMoreModal('${product._id}')" style="display: none;">
+            <!-- Modal content -->
+            <div class="see-more-modal-content" onclick="preventEvent()">
+              <div class="see-more-close" onclick="closeSeeMoreModal('${product._id}')">
+                <p class="text">CLOSE</p>
+                <svg xmlns="http://www.w3.org/2000/svg" width="22.592" height="17.192" viewBox="0 0 22.592 17.192">
+                  <path id="Path_438" data-name="Path 438" d="M5.264,2.144A2.992,2.992,0,0,1,3.712-.736V-8.36a2.992,2.992,0,0,1,1.552-2.784V-13.08A4.806,4.806,0,0,0,2-8.536v8.36A4.969,4.969,0,0,0,5.264,4.112ZM18.256,1l-3.92-5.936,3.952-5.9H16.24L13.28-6.36l-2.928-4.48H8.288l3.92,5.9L8.288,1H10.3L13.28-3.512,16.224,1Zm3.072,3.112A4.969,4.969,0,0,0,24.592-.176v-8.36a4.806,4.806,0,0,0-3.264-4.544v1.936a3.8,3.8,0,0,1,1.177,1.167A2.847,2.847,0,0,1,22.88-8.36V-.736a2.961,2.961,0,0,1-1.552,2.88Z" transform="translate(-2 13.08)" fill="#ff0136"/>
+                </svg>
+              </div>
+          
+              <div class="pc-part-modal-container">
+                <div class="modal-upper-side">
+                  <div class="specific-pc-part-image">
+                    <img
+                      class="img"
+                      src="${updateImageUrl(product.imgSrc)}"
+                    >
+                  </div>
+                  <div class="specific-pc-part-text">
+                    <h2 class="heading">${product.name}</h2>
+                    <p class="paragraph">
+                      ${product.detailedPartDesc||""}
+                    </p>
+                  </div>
+                </div>
+          
+                <div class="modal-lower-side">
+                  <p class="small-heading">SPECS</p>
+                  <div class="cus-list-container">
+                  ${divideArrayIntoChunk(product.specs||[],8).map(specs=>`<div class="modal-specs-detail-list">
+                    <div class="inner">
+                      <ul class="ul">
+                        ${specs.map(spec=>`<li class="li">${spec}</li>`).join('')}
+                      </ul>
+                    </div>
+                  </div>`).join('')}
+                </div>
+                </div>
+              </div>
+            </div>
+          </div>`)
+        });
+      });
+    });
+
+    setValueForConfigurationCode(variantId);
+    setEventListeners(variantId,id?'multi':'single');
+  
+  }
+
+  //open panels when someone clicks on it
+  function togglePanel(ele) {
+    // Toggle the 'active' class on the button
+    ele.classList.toggle('active');
+    var panel = ele.nextElementSibling;
+    if (panel.style.maxHeight) {
+      panel.style.maxHeight = null;
+    } else {
+      panel.style.maxHeight = panel.scrollHeight + 'px';
+    }
+
+    //display and hide image when the panel is open and close
+    const groupId = $(ele).attr('id').split('-')[1];
+    ele.classList.contains('active')
+      ? $(`#selected-part-image-${groupId}`).css('display', 'none')
+      : $(`#selected-part-image-${groupId}`).css('display', 'block');
+  }
+
+  //open parent panel in case of compatibility issue
+  function toggleParentPanel(parentGroupId) {
+    // Toggle the 'active' class on the button
+    $(`#button-${parentGroupId}`).toggleClass('active');
+    var panel = $(`#panel-${parentGroupId}`);
+    if (panel.height()) {
+      panel.css('max-height', null);
+    } else {
+      panel.css('max-height', panel.prop('scrollHeight') + 'px');
+    }
+
+    //display and hide image when the panel is open and close
+    $(`#button-${parentGroupId}`).hasClass('active')
+      ? $(`#selected-part-image-${parentGroupId}`).css('display', 'none')
+      : $(`#selected-part-image-${parentGroupId}`).css('display', 'block');
+  }
+
+  //toggle tabs i.e components, aesthetics, services
+  function toggleTab(tab, groupId) {
+    // Remove the 'active-config-tab' class from all tabs
+    $('.pc-parts-tab').removeClass('active-config-tab');
+    // Add the 'active-config-tab' class to the clicked tab
+    $(tab).addClass('active-config-tab');
+
+    //show parts according to group
+    $('.pc-parts-accordions').css('display', 'none');
+    $(`#accordian-${groupId}`).css('display', 'block');
+  }
+
+  // when someone select the part from the list
+  function selectPart(ele,type="single") {
+    //remove glowing-effect from every part becasue if the part has compatibility issue the glowing effect will automatically apply later in this function
+    $('.glowDiv').removeClass('glowDiv');
+    $('.compatibility-msg-div').css('display', 'none');
+
+    const partId = $(ele).attr('part-id');
+    const groupId = $(ele).attr('group-id');
+    const groupName = $(ele).attr('group-name');
+    const partName = $(ele).attr('part-name');
+    const partImage = $(ele).attr('part-image');
+    const parentPartGroup = $(ele).attr('part-parent-group');
+    let partParent = $(ele).attr('part-parent');
+    let partChilds = $(ele).attr('part-childs');
+    const variantId = $(ele).attr('variant-id');
+    if(groupName=="GPU"){
+      console.log("==>> GPU",$(ele).attr("groupFPS"))
+    const selectedFPS = JSON.parse($(ele).attr("groupFPS"));
+    console.log(selectedFPS)
+    createFPSSelectDiv(selectedFPS);
+    }
+    //remove selected class from every part which has same group id
+    $('[group-id=' + groupId + ']').removeClass('selected');
+
+    //add selected class to part that is clicked
+    $(ele).addClass('selected');
+
+    //update selected part name and image on group level
+    $(`#selected-part-name-${groupId}`).text(partName);
+    $(`#selected-part-image-${groupId}`).attr('src', partImage);
+
+    //update configurator price
+    updateConfiguratorPrice(type);
+
+    //check if parent part is not empty
+    if (partParent.length) {
+      partParent = partParent.split(',');
+
+      //check if all parent parts are selected below loop breaks when you return fasle so thats why we use ! symbol on return so that loop breaks when it find a selected parent
+      const isSelectedParents = !partParent.every((parent) => {
+        return !$("[part-id='" + parent + "']").hasClass('selected');
+      });
+
+      //if  parent is  not selected then glow the partent part
+      if (!isSelectedParents) {
+        //this function will open the panel of parent group
+        toggleParentPanel(parentPartGroup);
+        partParent.forEach((parent) => {
+          $("[part-id='" + parent + "']").addClass('glowDiv');
+        });
+
+        //scroll to glowing part and show compatibility div
+        setTimeout(() => {
+          $('.glowDiv').get(0).scrollIntoView({ behavior: 'smooth', block: 'start' });
+          $('.compatibility-msg-div').css('display', 'block');
+        }, 200);
+
+        //remove glowing effect and compatibility div after 15 seconds
+        setTimeout(function () {
+          $('.glowDiv').removeClass('glowDiv');
+          $('.compatibility-msg-div').css('display', 'none');
+        }, 15000);
+      }
+    }
+
+    //get all children part of this group
+    let childrenPartOfCurrentGroup = [];
+    $(ele)
+      .siblings()
+      .each((index, part) => {
+        if (!$(part).hasClass('selected')) {
+          childrenPartOfCurrentGroup.push(...$(part).attr('part-childs').split(','));
+        }
+      });
+
+    //remove duplicates and null from this array because some parts have same child and some have no child
+    childrenPartOfCurrentGroup = [...new Set(childrenPartOfCurrentGroup)];
+    childrenPartOfCurrentGroup = childrenPartOfCurrentGroup.filter((childPart) => childPart != '');
+
+    //loop all children parts to see if their parent is selected or not
+    childrenPartOfCurrentGroup.forEach((child) => {
+      const childPart = $(`[part-id="${child}"]`);
+
+      if (childPart.hasClass('selected')) {
+        //get parent part of this child
+        let childParentPart = childPart.attr('part-parent');
+        if (childParentPart.length) {
+          childParentPart = childParentPart.split(',');
+          //check if parent part is not selected
+          const isParentSelected = childParentPart.map((parent) => {
+            return $("[part-id='" + parent + "']").hasClass('selected');
+          });
+          if (!isParentSelected.includes(true)) {
+            //add glowing effect to every parent if not selected
+            childParentPart.forEach((parent) => {
+              $("[part-id='" + parent + "']").addClass('glowDiv');
+              $('.compatibility-msg-div').css('display', 'block');
+            });
+
+            //remove glowing effect and compatibility msg div after 15 seconds
+            setTimeout(function () {
+              $('.glowDiv').removeClass('glowDiv');
+              $('.compatibility-msg-div').css('display', 'none');
+            }, 15000);
+          }
+        }
+      }
+    });
+
+    setValueForConfigurationCode(variantId);
+  }
+
+  function openSeeMoreModal(partId){
+    $(`#seeMoreModal-${partId}`).css("display","block");
+    $(`#seeMoreModal-${partId}`).addClass("opened-seeMoreModal");
+    window.event.stopPropagation();
+  }
+  function preventEvent(){
+    window.event.stopPropagation();
+  }
+  function closeSeeMoreModal(partId){
+    $(`#seeMoreModal-${partId}`).css("display","none");
+    $(`#seeMoreModal-${partId}`).removeClass("opened-seeMoreModal");
+    window.event.stopPropagation();
+
+  }
+  //update price of configurator
+  function updateConfiguratorPrice(type) {
+    var price = type=="single"?'{{ product.selected_or_first_available_variant.price | money }}':$(".custom-option.custom-option-var.selected").children(".var-span-price").text();
+    price = price.replace('$', '');
+    price = price.replace(',', '');
+    price = price.replace(/ /g, '');
+    price = price.replace(/\n/g, '-');
+    price = parseFloat(price);
+    $('.inner.selected').each(function () {
+      price += parseFloat($(this).attr('part-price'));
+    });
+    $('.config-actual-price').text('$' + price);
+    calculateDiscount(type);
+  }
+
+  async function addToCartBasic(id){
+    let variantId;
+    if(id){
+      variantId=id;
+    }
+    else{
+      variantId = $(".active-variant-cta").attr("id");
+    }
+
+    const selectedVariantData = GLOBAL_VARIANT_CONFIGURATOR_DATA.data.find(
+      (variantData) => variantData.variantId == variantId
+    );
+    console.log("selectedVariantData",selectedVariantData);
+    const cartProperties = {};
+    let variantPrice= selectedVariantData.variantPrice;
+    let partIds =[];
+    selectedVariantData.treeData.forEach((tree) => {
+      tree.Groups.forEach((group) => {
+        group.product.forEach((product) => {
+          if (product.isDefault) {
+            cartProperties[group.name] = `${product.name}`;
+            partIds.push(product._id);
+          }
+        });
+      });
+    });
+    cartProperties['totalFinalPrc'] = Number(variantPrice).toFixed(2) * 100;
+    cartProperties['apx_custom_po_ids'] = partIds.join('|&|');
+    console.log("cartProperties",cartProperties);
+     let formData = {
+      items: [
+        {
+          id: variantId,
+          quantity: 1,
+          properties: cartProperties,
+        },
+      ],
+    };
+    await fetch(window.Shopify.routes.root + 'cart/add.js', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    });
+
+    window.location.href = window.Shopify.routes.root + 'cart'; 
+
+    
+  
+  }
+  async function customizePcAddToCart(id) {
+  
+    let variantId;
+    if(id){
+      variantId=id
+    }
+    else{
+    variantId = $(".custom-option.custom-option-var.selected").attr("id").split("select-variant-")[1];
+    }
+    console.log("variantId",variantId)
+    saveConfigurationCode(variantId);
+    //get all part those have selected class and variant-id attribute = variantId
+    const selectedParts = $('.selected').filter(function () {
+      return $(this).attr('variant-id') == variantId;
+    });
+    console.log('selectedParts', selectedParts);
+
+    const cartProperties = {};
+    const partIds = [];
+    selectedParts.each(function () {
+      const partId = $(this).attr('part-id');
+      const partName = $(this).attr('part-name');
+      const partPrice = $(this).attr('part-price');
+      const groupName = $(this).attr('group-name');
+      if (parseInt(partPrice) > 0) {
+        cartProperties[groupName] = `${partName} | $${partPrice}`;
+      } else {
+        cartProperties[groupName] = `${partName}`;
+      }
+      partIds.push(partId);
+    });
+    cartProperties['totalFinalPrc'] = $(`.cut-off-price`)
+      .text()
+      .replace('.', '')
+      .replace('$', '')
+      .replace(',', '')
+      .trim();
+    cartProperties['apx_custom_po_ids'] = partIds.join('|&|');
+    console.log('cartProperties', cartProperties);
+    //ajax cart shopify
+    let formData = {
+      items: [
+        {
+          id: variantId,
+          quantity: 1,
+          properties: cartProperties,
+        },
+      ],
+    };
+    await fetch(window.Shopify.routes.root + 'cart/add.js', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    });
+
+    window.location.href = window.Shopify.routes.root + 'cart';
+  }
+
+
+  function divideArrayIntoChunk(arr, chunkSize) {
+    if (chunkSize <= 0) throw "Invalid chunk size";
+    var R = [];
+    for (var i=0,len=arr.length; i<len; i+=chunkSize)
+      R.push(arr.slice(i,i+chunkSize));
+    return R;
+  }
+
+  var GLOBAL_VARIANT_CONFIGURATOR_DATA;
+  async function getConfiguratorData () {
+    const variants = {{product.variants | json}};
+    const variantIds = variants.map(v => v.id).join(",")
+    const data = await fetch(`${BASE_URL}/sf/varsTempsData?varientIds=${variantIds}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    GLOBAL_VARIANT_CONFIGURATOR_DATA = await data.json();
+  };
+
+  var DISCOUNT_VALUE;
+  var DISCOUNT_TITLE;
+  async function getGlobalDiscount(){
+    const data = await fetch(`${BASE_URL}/discount/globalDiscount`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const { g_discount = {} } = await data.json();
+     DISCOUNT_VALUE = !g_discount?.value || g_discount?.value == 0 ? null : g_discount.value;
+     DISCOUNT_TITLE = g_discount?.title ? g_discount?.title : '';
+  }
+  
+  function scrollRight () {
+  console.log("working ")
+  event.preventDefault();
+  $('.variants-specs-main').animate({
+    scrollLeft: "+=250px"
+  });
+};
+  async function main(){
+    await  getGlobalDiscount();
+    await getConfiguratorData();
+  }
+
+
+  //save configuration modal code
+  function saveConfigurationCode(id){
+    try{
+      const activeVaraint = id||'{{product.selected_or_first_available_variant.id }}';
+      const inputSelect = `.configuration-code`;    
+      const code = $(inputSelect).val()
+
+      if(!code){
+        return
+      }
+
+      const allSelectedProdOpts = $('.selected').filter(function () {
+        return $(this).attr('variant-id') == activeVaraint;
+      });
+      let prodOptIds = []
+      $(allSelectedProdOpts).each(function(){
+        prodOptIds.push($(this).attr("part-id"))
+      })
+
+      var raw = JSON.stringify({
+        code,
+        prodOptIds
+      });
+
+      var requestOptions = {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: raw,
+        redirect: 'follow'
+      };
+
+      fetch(`${BASE_URL}/sf/configurationcode/`, requestOptions)
+
+    }catch(e){
+      console.log("==>> error in saveConfigurationCode", e.message)
+    }
+  }
+
+  //creating event listener for the configuration code working
+  function setEventListeners(id,type){
+    console.log("==>> setEventListeners outside id",id)
+
+    //this listen to the input field and when ever a code is entered function will be called after 1.5 sec
+    let timer;
+    $(".configuration-code").keyup(function(){
+      console.log("==>> setEventListeners")
+        clearTimeout(timer);
+        timer = setTimeout(selectProOptWRTCode(id,type), 3000)
+      }); 
+  }
+
+  //this function generates a code for the selected prodOptions and sets it in the input field  
+  async function setValueForConfigurationCode(id){
+    try{
+      $(".config-code-error").text("");
+      console.log("==>> setValueForConfigurationCode")
+      const activeVaraint = id||'{{product.selected_or_first_available_variant.id }}';
+      const allSelectedProdOpts = $('.selected').filter(function () {
+        return $(this).attr('variant-id') == activeVaraint;
+      });
+      console.log("==>> setValueForConfigurationCode",allSelectedProdOpts)
+
+      let allIds = ""
+      $(allSelectedProdOpts).each(function(){
+        allIds += String($(this).attr("part-id"))
+      })
+      /*allIds += String($(this).attr("prodoptid")).charAt(
+          String($(this).attr("prodoptid")).length - 1
+        )*/
+
+      var buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(allIds));
+      var chars = Array.prototype.map.call(new Uint8Array(buffer), ch => String.fromCharCode(ch)).join('');
+      
+      const code = btoa(chars).replace(/[^a-zA-Z0-9]/g, "").substring(0, 12).toUpperCase();
+      console.log("==>> setValueForConfigurationCode",code)
+      const inputSelect = `.configuration-code`
+      $(inputSelect).val(code)
+    }
+    catch(e){
+      console.log("==>> ERROR in setValueForConfigurationCode", e.message)
+    }
+  }
+
+  //this function get all the prod opt saved with a specific code and selects them
+  async function selectProOptWRTCode(id,type){
+    const activeVaraint = id||'{{product.selected_or_first_available_variant.id }}';
+    const inputSelect = `.configuration-code`;    
+
+    const code = $(inputSelect).val()
+    console.log("activeVaraint",activeVaraint,code)
+    if(!code){
+      return
+    }
+
+    try{
+      const response = await fetch(`${BASE_URL}/sf/configurationcode/${code}`, {    
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if(response.status >= 400 ){
+        $(".config-code-error").text("Invalid Code");
+
+        return
+      }
+
+      let exist = [];
+      const { data : { prodOptionIds:partIds = [] } = {} } = await response.json();
+
+      if(!partIds.length){
+        $(".config-code-error").text("Invalid Code");
+        return
+      }
+
+      //check if all part ids are present in the modal
+      partIds.forEach(partId=>exist.push($(".pc-parts-details").find(`[part-id="${partId}"]`).length > 0))
+
+      
+
+      
+      if(exist.includes(false)){
+        $(".config-code-error").text("Invalid Code")
+        return
+      }
+      //remove selected from all items
+      $(".pc-parts-details").children(".selected").removeClass("selected");
+
+    //add selected class to all parts that comes from code
+     partIds.forEach(partId=>{
+      const part = $(".pc-parts-details").find(`[part-id="${partId}"]`);
+      const groupId = $(part).attr("group-id");
+      const partName = $(part).attr("part-name");
+      const partImage = $(part).attr("part-image");
+
+    //update selected part name and image on group level
+    $(`#selected-part-name-${groupId}`).text(partName);
+    $(`#selected-part-image-${groupId}`).attr('src', partImage);
+    //add selected class to part 
+    $(part).addClass("selected")
+    
+    });
+
+    //update configurator price
+    updateConfiguratorPrice(type);
+    $(".config-code-error").text("");
+
+    
+
+    }catch(e){
+      console.log("==>> error in selectProOptWRTCode", e.message)
+    }
+
+  }
+
+  //create fps selects 
+  function createFPSSelectDiv(selectedFPS){
+    $(".games-with-fps").empty();
+    selectedFPS.forEach((fps,index)=>{
+      if(index<3){
+      $(".games-with-fps").append(`
+      <div class="custom-select" id="gameSelect${index+1}">
+        <div class="selected-option">
+          <img class="selected-img" src="${updateImageUrl(fps.value)}" alt="Selected Game Image">
+          <div class="selected-game-content">
+            <span class="selected-name">${fps.name||""}</span>
+            <progress value="${fps.key}" max="300"></progress>
+            <p class="main-fps">${fps.key}</p>
+          </div>
+          <img class="arrow-img-select" src="https://cdn.shopify.com/s/files/1/0013/1481/6094/files/Path_433.png?v=1705315699">
+        </div>
+        <div class="dropdown-content">
+          <!-- Search input -->
+          <input type="text" class="search-input cus-fps-search" placeholder="Search...">
+          <!-- Game options -->
+          ${selectedFPS.map((fps,index)=>
+            `<div class="game-option ${index==0?"selected":""}" fps-key="${fps.key}">
+            <img class="option-img" src="${updateImageUrl(fps.value)}" alt="${fps.name||""}">
+              <span class="option-name">${fps.name||""}</span>
+            </div>`
+            ).join('')}
+        </div>
+      </div>`)
+      }
+      });
+      activateCustomSelectForFPS();
+      let fpsToggles = document.getElementsByClassName('fps-toggle');
+      let img = document.querySelector('.sticky-pc-img');
+      let i;
+      for (i = 0; i < fpsToggles.length; i++) {
+        fpsToggles[i].classList.toggle('active');
+        var panel = fpsToggles[i].nextElementSibling;
+        if (panel.style.maxHeight) {
+          panel.style.maxHeight = null;
+          img.style.maxHeight = '100%';
+          img.style.opacity = '1';
+        } else {
+          panel.style.maxHeight = "max-content";
+          img.style.maxHeight = '0';
+          img.style.opacity = '0';
+        }
+      }
+  }
+  //fps select activator
+  function activateCustomSelectForFPS () {
+    var customSelects = document.querySelectorAll('.custom-select');
+
+    customSelects.forEach(function (customSelect) {
+      var dropdownContent = customSelect.querySelector('.dropdown-content');
+      var arrowImage = customSelect.querySelector('.arrow-img-select');
+      var searchInput = dropdownContent.querySelector('.search-input');
+      var gameOptions = dropdownContent.querySelectorAll('.game-option');
+
+      // Close the dropdown initially
+      dropdownContent.style.display = 'none';
+
+      // Toggle dropdown on click
+      customSelect.addEventListener('click', function () {
+        if (dropdownContent.style.display === 'block') {
+          dropdownContent.style.display = 'none';
+          customSelect.classList.remove('open');
+          arrowImage.classList.remove('rotate');
+        } else {
+          dropdownContent.style.display = 'block';
+          customSelect.classList.add('open');
+          arrowImage.classList.add('rotate');
+          // Focus on the search input when the dropdown opens
+          searchInput.focus();
+        }
+      });
+
+      // Filter options based on search input
+      searchInput.addEventListener('input', function () {
+        var searchText = searchInput.value.toLowerCase();
+        gameOptions.forEach(function (option) {
+          var optionName = option.querySelector('.option-name').textContent.toLowerCase();
+          if (optionName.includes(searchText)) {
+            option.style.display = 'flex';
+          } else {
+            option.style.display = 'none';
+          }
+        });
+      });
+
+      // Handle selection of a game option
+      dropdownContent.addEventListener('click', function (event) {
+        var selectedOption = event.target.closest('.game-option');
+        if (selectedOption) {
+          // Remove the "selected" class from all options
+          gameOptions.forEach(function (option) {
+            option.classList.remove('selected');
+          });
+
+          // Add the "selected" class to the clicked option
+          selectedOption.classList.add('selected');
+
+          var selectedImgSrc = selectedOption.querySelector('.option-img').src;
+          var selectedName = selectedOption.querySelector('.option-name').textContent;
+
+          // Update selected option in the custom select
+          customSelect.querySelector('.selected-img').src = selectedImgSrc;
+          customSelect.querySelector('.selected-name').textContent = selectedName;
+          customSelect.querySelector('.main-fps').textContent = selectedOption.getAttribute('fps-key');
+
+          // Hide the dropdown after selection
+          dropdownContent.style.display = 'none';
+          customSelect.classList.remove('open');
+          arrowImage.classList.remove('rotate');
+
+          // Stop event propagation to prevent window click event from being triggered
+          event.stopPropagation();
+        }
+      });
+
+      // Close the dropdown if the user clicks outside of it
+      window.addEventListener('click', function (event) {
+        if (!event.target.closest('.custom-select')) {
+          dropdownContent.style.display = 'none';
+          customSelect.classList.remove('open');
+          arrowImage.classList.remove('rotate');
+        }
+      });
+    });
+  };
+    
+
+  main()
+</script>
