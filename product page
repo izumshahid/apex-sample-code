@@ -1,0 +1,474 @@
+<!-- apex product page -->
+
+<div class="product-sticky-header">
+  <div class="sticky-content">
+    <div class="logo-div">
+      <img class="img" src="{{ product.metafields.my_fields.product_name_image.value | img_url: 'master' }}">
+    </div>
+
+    <div class="tabs-div">
+      <a class="sticky-product-header-tab currentPosition" href="{{ section.settings.sticky_product_header_link }}">
+        {{- section.settings.sticky_product_header_label -}}
+      </a>
+      <a class="sticky-product-header-tab" href="{{ section.settings.sticky_product_header_link_1 }}">
+        {{- section.settings.sticky_product_header_label_1 -}}
+      </a>
+      <a class="sticky-product-header-tab" href="{{ section.settings.sticky_product_header_link_2 }}">
+        {{- section.settings.sticky_product_header_label_2 -}}
+      </a>
+    </div>
+
+    <div class="cta-div">
+      <a
+        class="sticky-product-header-cta"
+        id="openConfigModal"
+        onclick="openCustomizeModal()"
+        href="{{ section.settings.sticky_product_header_cta_link }}"
+      >
+        {{- section.settings.sticky_product_header_cta_label }}
+        <svg xmlns="http://www.w3.org/2000/svg" width="6.3" height="8.568" viewBox="0 0 6.3 8.568" style="&#10;">
+          <path id="Path_9" data-name="Path 9" d="M48.385,0V8.568l6.3-4.284Z" transform="translate(-48.385)" fill="#ff0136" style="&#10;    fill: #000;&#10;"/>
+        </svg>
+      </a>
+      <a
+        class="sticky-product-header-cta"
+        href="{{ section.settings.sticky_product_header_cta_link_1 }}"
+        onclick="addToCartBasic({{product.selected_or_first_available_variant.id }})"
+      >
+        {{- section.settings.sticky_product_header_cta_label_1 }}
+        <svg xmlns="http://www.w3.org/2000/svg" width="6.3" height="8.568" viewBox="0 0 6.3 8.568" style="&#10;">
+          <path id="Path_9" data-name="Path 9" d="M48.385,0V8.568l6.3-4.284Z" transform="translate(-48.385)" fill="#ff0136" style="&#10;    fill: #000;&#10;"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="cus--main-product">
+  <div class="product-inner" id="productInner">
+    <div class="left-side">
+      <div class="inner">
+        <h2 class="title">{{ product.title }}</h2>
+        <div class="price">
+          <span class="off-price actual-price">{{ product.selected_or_first_available_variant.price | money }}</span>
+          <span class="discounted-price"></span>
+        </div>
+        <div class="small-text"><span class="text">w/code</span> <span class="discount-code"></span></div>
+        <div class="product-cta">
+          <a class="main-product-cta" href="#" onclick="openCustomizeModal()">Customize this pc</a>
+          <div class="config-product-atc cus--config-product-atc">
+            <div class="recommended-add-to-cart-cta">
+              <button
+                type="submit"
+                name="add"
+                data-add-to-cart=""
+                class="cus-atc-btn btn btn--full add-to-cart"
+                onclick="addToCartBasic({{product.selected_or_first_available_variant.id }})"
+              >
+                <svg
+                  class="act-svg"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14.186"
+                  height="13.085"
+                  viewBox="0 0 14.186 13.085"
+                >
+                  <g id="Group_551" data-name="Group 551" transform="translate(-5672.767 109.57)">
+                    <circle id="Ellipse_20" data-name="Ellipse 20" cx="1.167" cy="1.167" r="1.167" transform="translate(5675.513 -98.819)" fill="#fff"></circle>
+                    <circle id="Ellipse_21" data-name="Ellipse 21" cx="1.167" cy="1.167" r="1.167" transform="translate(5684.619 -98.819)" fill="#fff"></circle>
+                    <path id="Path_346" data-name="Path 346" d="M5673.965-108.26h2.219l1.075,4.912h9.736v-5.743" transform="translate(-1.198 -0.479)" fill="none" stroke="#fff" stroke-width="1.5"></path>
+                    <path id="Path_347" data-name="Path 347" d="M5674.618-107.929l1.814,8.246h9.856" transform="translate(0.31 -0.893)" fill="none" stroke="#fff" stroke-width="1.5"></path>
+                  </g>
+                </svg>
+                <span data-add-to-cart-text="" data-default-text="Add to cart"> Add to cart </span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="jump-to-cta">
+          <a href="#cusProductFeatures">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16.099" height="46.381" viewBox="0 0 16.099 46.381">
+              <path id="Path_16" data-name="Path 16" d="M64.544,0V6.17H30V9.928H64.544V16.1L76.381,8.049Z" transform="translate(16.099 -30) rotate(90)" fill="#ff0136"></path>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-side">
+      <img class="background-image" src="{{ section.settings.main_product_image_testing_bg | img_url: 'master' }}">
+      <img class="image" src="{{ product.images[0] | img_url: 'master' }}">
+      {% if product.metafields.custom.shipping_label.value != blank %}
+        <div class="product-img-cta">
+          <p class="cta">{{ product.metafields.custom.shipping_label.value }}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="custom-product-features" id="cusProductFeatures">
+  <div class="cus--container">
+    <div class="cus-prod-features">
+      <div class="right-side">
+        <div class="inner">
+          <div class="model">
+            <p class="small-feature-heading">MODEL</p>
+            <p class="title">{{ product.title }}</p>
+            <div
+              class="loox-rating"
+              data-id="{{ product.id }}"
+              data-rating="{{ product.metafields.loox.avg_rating }}"
+              data-raters="{{ product.metafields.loox.num_reviews }}"
+            ></div>
+          </div>
+          <div class="price">
+            <p class="small-feature-heading">PRICE</p>
+            <div class="main-price">
+              <span class="off-price actual-price">
+                {{- product.selected_or_first_available_variant.price | money -}}
+              </span>
+              <span class="discounted-price"></span>
+            </div>
+            <div class="small-text"><span class="text">w/code</span> <span class="discount-code"></span></div>
+            <p class="text-with-link">
+              <p class="affirm-as-low-as" data-page-type="category" data-amount="{{ product.price_min }}"></p>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="left-side">
+        <div class="inner">
+          <div class="overview">
+            <p class="small-feature-heading">OVERVIEW</p>
+            <p class="description">{{ product.metafields.my_fields.prod_desc_multi.value }}</p>
+            {% if product.metafields.custom.shipping_label.value != blank %}
+              <p class="bold-text">{{ product.metafields.custom.shipping_label.value }}</p>
+            {% endif %}
+          </div>
+          <div class="standard">
+            <p class="small-feature-heading">COMES STANDARD WITH:</p>
+            <div class="heading">
+              {% for spec in product.metafields.custom.product_specs.value limit: 3 %}
+                <p class="title">{{ spec }}</p>
+              {% endfor %}
+            </div>
+            <div class="link" onclick="toggleTechSpecsModal()">All specs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mainConfigModal" class="ConfigModal">
+  <!-- Modal content -->
+  <div class="config-modal-content">
+    <div class="close-config-modal" onclick="closeCustomizeModal()">
+      <p class="text">CLOSE</p>
+      <svg xmlns="http://www.w3.org/2000/svg" width="22.592" height="17.192" viewBox="0 0 22.592 17.192">
+        <path id="Path_438" data-name="Path 438" d="M5.264,2.144A2.992,2.992,0,0,1,3.712-.736V-8.36a2.992,2.992,0,0,1,1.552-2.784V-13.08A4.806,4.806,0,0,0,2-8.536v8.36A4.969,4.969,0,0,0,5.264,4.112ZM18.256,1l-3.92-5.936,3.952-5.9H16.24L13.28-6.36l-2.928-4.48H8.288l3.92,5.9L8.288,1H10.3L13.28-3.512,16.224,1Zm3.072,3.112A4.969,4.969,0,0,0,24.592-.176v-8.36a4.806,4.806,0,0,0-3.264-4.544v1.936a3.8,3.8,0,0,1,1.177,1.167A2.847,2.847,0,0,1,22.88-8.36V-.736a2.961,2.961,0,0,1-1.552,2.88Z" transform="translate(-2 13.08)" fill="#ff0136"/>
+      </svg>
+    </div>
+
+    <div class="config-modal-main">
+      <div class="config-product-side">
+        <div class="config-sticky-side">
+          <div class="config-product-main">
+            <p class="small-heading">Customize your pc</p>
+            <h2 class="heading">{{ product.title }}</h2>
+            <img
+              class="sticky-pc-img"
+              src="{{ product.images[0] | img_url: 'master' }}"
+            >
+            <div class="config-pc-price-atc">
+              <div class="price-and-cut-off">
+                <p class="cut-off-price config-actual-price">
+                  {{ product.selected_or_first_available_variant.price | money }}
+                </p>
+                <span class="main-price config-discounted-price"> </span>
+              </div>
+              <p class="w-code">w/code <span class="main-code config-discount-code"></span></p>
+              <p class="text-with-link">
+                <p class="affirm-as-low-as" data-page-type="category" data-amount="{{ product.price_min }}"></p>
+              </p>
+              <div class="config-product-atc modal-config-product-atc">
+                <div class="recommended-add-to-cart-cta">
+                  <button
+                    type="submit"
+                    name="add"
+                    data-add-to-cart=""
+                    class="cus-atc-btn btn btn--full add-to-cart"
+                    onclick="customizePcAddToCart({{product.selected_or_first_available_variant.id }})"
+                  >
+                    <span data-add-to-cart-text="" data-default-text="Add to cart"> Add to cart </span>
+                  </button>
+                </div>
+              </div>
+
+              {% comment %}
+                <div class="config-code">
+                  <p class="text">Configuration code:</p>
+                  <div class="copy-text">
+                    <input type="text" class="text configuration-code">
+                    <button><i class="fa fa-clone"></i></button>
+                  </div>
+                </div>
+                <span class="config-code-error"></span>
+              {% endcomment %}
+            </div>
+          </div>
+
+          <div class="config-select-games-fps">
+            <div class="cus-gaming-fps">
+              <button class="fps-toggle">
+                <img
+                  class="img"
+                  src="https://cdn.shopify.com/s/files/1/0013/1481/6094/files/Image_248_cb5a4e24-f2db-4bbc-9086-6c0ead5fd373.png?v=1705328436"
+                >
+              </button>
+              <div class="fps-panel">
+                <div class="games-with-fps">
+                  {% comment %} Data will come from createFPSDIV function {% endcomment %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="customize-pc-side">
+        <div class="tab-header">
+          {% comment %}
+            Configurator tabs heading will be inserted here through JS
+          {% endcomment %}
+        </div>
+        {% comment %}
+          configurator parts code will be inserted here through JS
+        {% endcomment %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SEE MORE MODAL -->
+<div id="allSeeMoreModal"></div>
+<!-- The Modal -->
+<!-- The Tech Specs Modal -->
+<div id="techSpecsModal" class="tech-specs-modal">
+  <!-- Tech Specs Modal Content -->
+  <div class="tech-specs-modal-content">
+    <span class="tech-specs-close" onclick="toggleTechSpecsModal()">&times;</span>
+
+    {% comment %} TECH SPECS MODAL {% endcomment %}
+    {% render 'product-technical-specs', product: product %}
+  </div>
+</div>
+{% comment %} compatibility msg {% endcomment %}
+<div class="compatibility-msg-div">
+  <p>The Selected Option Has A Compatability Issue And Needs One Of The Highlighted Items</p>
+</div>
+
+{% render 'configurator-combined', product: product %}
+{% render 'custom-product-configurator' %}
+
+{% schema %}
+{
+  "name": "Custom product main",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "main_product_image_testing",
+      "label": "Product image"
+    },
+    {
+      "type": "image_picker",
+      "id": "main_product_image_testing_bg",
+      "label": "Background image"
+    },
+    {
+      "type": "image_picker",
+      "id": "main_product_image_testing_logo",
+      "label": "image"
+    },
+    {
+      "type": "image_picker",
+      "id": "sticky_product_header_logo",
+      "label": "image"
+    },
+    {
+      "type": "text",
+      "id": "sticky_product_header_label",
+      "label": "Tab label 1"
+    },
+    {
+      "type": "url",
+      "id": "sticky_product_header_link",
+      "label": "Tab label 1"
+    },
+    {
+      "type": "text",
+      "id": "sticky_product_header_label_1",
+      "label": "Tab label 2"
+    },
+    {
+      "type": "url",
+      "id": "sticky_product_header_link_1",
+      "label": "Tab label 2"
+    },
+    {
+      "type": "text",
+      "id": "sticky_product_header_label_2",
+      "label": "Tab label 3"
+    },
+    {
+      "type": "url",
+      "id": "sticky_product_header_link_2",
+      "label": "Tab label 2"
+    },
+    {
+      "type": "text",
+      "id": "sticky_product_header_cta_label",
+      "label": "CTA label 1"
+    },
+    {
+      "type": "url",
+      "id": "sticky_product_header_cta_link",
+      "label": "CTA link 1"
+    },
+    {
+      "type": "text",
+      "id": "sticky_product_header_cta_label_1",
+      "label": "CTA label 2"
+    },
+    {
+      "type": "url",
+      "id": "sticky_product_header_cta_link_1",
+      "label": "CTA link 2"
+    }
+  ]
+}
+{% endschema %}
+
+{% stylesheet %}
+{% endstylesheet %}
+
+{% javascript %}
+{% endjavascript %}
+
+<!-- sticky nav -->
+<script>
+  $(window).on('scroll', function () {
+    var scrollTop = $(window).scrollTop();
+    if (scrollTop < 500) {
+      $('.sticky-product-header-tab').removeClass('currentPosition');
+      $('a[href="#productInner"]').addClass('currentPosition');
+    }
+
+    if (scrollTop > 1300) {
+      $('.sticky-product-header-tab').removeClass('currentPosition');
+      $('a[href="#designedByApex"]').addClass('currentPosition');
+    }
+
+    if (scrollTop > 3900) {
+      $('.sticky-product-header-tab').removeClass('currentPosition');
+      $('a[href="#productTechnical"]').addClass('currentPosition');
+    }
+  });
+</script>
+
+<!-- CONFIG MODAL -->
+<script>
+  function openCustomizeModal(selectedVariantId) {
+    document.getElementById('mainConfigModal').style.display = 'block';
+    configuratorModal();
+  }
+
+  function closeCustomizeModal() {
+    document.getElementById('mainConfigModal').style.display = 'none';
+    //reset price on customize modal
+    $('.config-discounted-price').text($('.discounted-price:first').text());
+    $('.config-actual-price').text($('.actual-price:first').text());
+  }
+
+  // When the user clicks anywhere outside of the modal, close it
+  window.onclick = function (event) {
+    if (event.target == modal) {
+      modal.style.display = 'none';
+    }
+  };
+</script>
+
+<!-- COPY TO CLIPBOARD -->
+<script>
+  let copyText = document.querySelector('.copy-text');
+  copyText.querySelector('button').addEventListener('click', function () {
+    let input = copyText.querySelector('input.text');
+    input.select();
+    document.execCommand('copy');
+    copyText.classList.add('active');
+    window.getSelection().removeAllRanges();
+    setTimeout(function () {
+      copyText.classList.remove('active');
+    }, 2500);
+  });
+</script>
+
+<!-- GAURANTEED FPS ACCORDION -->
+<script>
+  var fpsToggles = document.getElementsByClassName('fps-toggle');
+  var img = document.querySelector('.sticky-pc-img');
+  var i;
+  for (i = 0; i < fpsToggles.length; i++) {
+    fpsToggles[i].addEventListener('click', function () {
+      this.classList.toggle('active');
+      var panel = this.nextElementSibling;
+      if (panel.style.maxHeight) {
+        panel.style.maxHeight = null;
+        img.style.maxHeight = '100%';
+        img.style.opacity = '1';
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+        img.style.maxHeight = '0';
+        img.style.opacity = '0';
+      }
+    });
+  }
+</script>
+
+<!-- TECH SPECS MODAL -->
+<script>
+  // Function to toggle the visibility of the Tech Specs Modal
+  function toggleTechSpecsModal() {
+    var techSpecsModal = document.getElementById('techSpecsModal');
+    techSpecsModal.style.display = techSpecsModal.style.display === 'block' ? 'none' : 'block';
+  }
+
+  // Close the Tech Specs Modal when the user clicks anywhere outside of it
+  window.onclick = function (event) {
+    var techSpecsModal = document.getElementById('techSpecsModal');
+    if (event.target == techSpecsModal) {
+      techSpecsModal.style.display = 'none';
+    }
+  };
+</script>
+
+{% comment %} Script to recalculate affirm price on product page {% endcomment %}
+<script>
+  $('.config-discounted-price').ready(function () {
+    console.log('discounted-price', $('.config-discounted-price').text());
+    const targetNode = document.querySelector('.config-discounted-price');
+    console.log('targetNode', targetNode);
+    const config = { attributes: true, childList: true, subtree: true };
+    const observer = new MutationObserver(function (mutationList, observer) {
+      var affirmFinal = '.affirm-as-low-as';
+      let newPrice = $('.config-discounted-price').text();
+      newPrice = newPrice.replace(/[^0-9]/g, '');
+      console.log('newPrice', newPrice);
+      $(affirmFinal).attr('data-amount', newPrice.toString());
+      affirm.ui.refresh();
+    });
+    observer.observe(targetNode, config);
+    // $('#price_per_feet').on('DOMSubtreeModified');
+  });
+</script>
